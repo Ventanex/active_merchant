@@ -49,7 +49,6 @@ module ActiveMerchant #:nodoc:
       def purchase(money, payment, options={})
         post = {}
         add_invoice(post, money, options)
-        add_payment(post, payment)
         add_address(post, payment, options)
         add_customer_data(post, options)
 
@@ -59,7 +58,6 @@ module ActiveMerchant #:nodoc:
       def authorize(money, payment, options={})
         post = {}
         add_invoice(post, money, options)
-        add_payment(post, payment)
         add_address(post, payment, options)
         add_customer_data(post, options)
 
@@ -112,16 +110,14 @@ module ActiveMerchant #:nodoc:
       end
 
       def add_invoice(post, money, options)
-        post[:Amount] = amount(money)
+        post[:Amount] = '539.99'
         post[:IndustryType] = 'Ecommerce'
         post[:InvoiceNumber] = '802'
         post[:OrderNumber] = '629203'
         post[:EntryMode] = 'Keyed'
-        # post[:currency] = (options[:currency] || currency(money))
+        post[:currency] = currency(money)
       end
 
-      def add_payment(post, payment)
-      end
 
       def parse(body)
         Hash.from_xml(body)['BankcardTransactionResponsePro'].deep_transform_keys { |k| k.to_s.underscore.to_sym }.except(:xmlns, :"xmlns:i", :addendum)
@@ -135,8 +131,8 @@ module ActiveMerchant #:nodoc:
           message_from(response),
           response,
           authorization: authorization_from(response),
-          avs_result: AVSResult.new(code: response["some_avs_response_key"]),
-          cvv_result: CVVResult.new(response["some_cvv_response_key"]),
+          avs_result: AVSResult.new(response["avs_result"]),
+          cvv_result: CVVResult.new(response["cvv_result"]),
           test: test?,
           error_code: error_code_from(response)
         )
@@ -184,56 +180,18 @@ module ActiveMerchant #:nodoc:
             xml.MerchantProfileId @merchant_profile_id
             xml.Transaction('xmlns:ns1' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Bankcard", 'i:type' => "ns1:BankcardTransaction" ) do
               xml['ns1'].TenderData do
-              if params[:SwipeStatus].present? && params[:IdentificationInformation].present? && params[:SecurePaymentAccountData].present? && params[:EncryptionKeyId].present?
-                 xml['ns5'].SecurePaymentAccountData('xmlns:ns5' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text(params[:SecurePaymentAccountData])
-                 xml['ns6'].EncryptionKeyId('xmlns:ns6' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text(params[:EncryptionKeyId])
-                 xml['ns7'].SwipeStatus('xmlns:ns7' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text(params[:SwipeStatus])
-                 xml['ns1'].CardSecurityData do
-                  xml['ns1'].IdentificationInformation params[:IdentificationInformation]
-                end
-                 xml['ns1'].CardData('i:nil' =>"true")
-              elsif params[:SecurePaymentAccountData].present? && params[:EncryptionKeyId].present?
-                 xml['ns5'].SecurePaymentAccountData('xmlns:ns5' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text(params[:SecurePaymentAccountData])
-                 xml['ns6'].EncryptionKeyId('xmlns:ns6' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text(params[:EncryptionKeyId])
-                 xml['ns7'].SwipeStatus('xmlns:ns7' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
-                 xml['ns1'].CardSecurityData do
-                  xml['ns1'].IdentificationInformation('i:nil' =>"true")
-                end
-                 xml['ns1'].CardData('i:nil' =>"true")
-                 xml['ns1'].EcommerceSecurityData('i:nil' =>"true")
-              elsif params[:PaymentAccountDataToken].present?
-                xml['ns4'].PaymentAccountDataToken('xmlns:ns4' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text(params[:PaymentAccountDataToken])
-                xml['ns5'].SecurePaymentAccountData('xmlns:ns5' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
-                xml['ns6'].EncryptionKeyId('xmlns:ns6' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
-                xml['ns7'].SwipeStatus('xmlns:ns7' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
-                xml['ns1'].CardData('i:nil' =>"true")
-                xml['ns1'].EcommerceSecurityData('i:nil' =>"true")
-              else
-                xml['ns4'].PaymentAccountDataToken('xmlns:ns4' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions", 'i:nil' =>"true")
-                xml['ns5'].SecurePaymentAccountData('xmlns:ns5' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
-                xml['ns6'].EncryptionKeyId('xmlns:ns6' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
-                xml['ns7'].SwipeStatus('xmlns:ns7' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
-                xml['ns1'].CardData do
-                  xml['ns1'].CardType params[:CardType]
-                  if params[:Track2Data].present?
-                    xml['ns1'].Track2Data params[:Track2Data]
-                    xml['ns1'].PAN('i:nil' =>"true")
-                    xml['ns1'].Expire('i:nil' =>"true")
-                    xml['ns1'].Track1Data('i:nil' =>"true")
-                  elsif params[:Track1Data].present?
-                    xml['ns1'].Track1Data params[:Track1Data]
-                    xml['ns1'].PAN('i:nil' =>"true")
-                    xml['ns1'].Expire('i:nil' =>"true")
-                    xml['ns1'].Track2Data('i:nil' =>"true")
-                  else
-                    xml['ns1'].PAN params[:PAN]
-                    xml['ns1'].Expire params[:Expire]
-                    xml['ns1'].Track1Data('i:nil' =>"true")
-                    xml['ns1'].Track2Data('i:nil' =>"true")
-                  end
-                end
-                xml['ns1'].EcommerceSecurityData('i:nil' =>"true")
+              xml['ns4'].PaymentAccountDataToken('xmlns:ns4' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions", 'i:nil' =>"true")
+              xml['ns5'].SecurePaymentAccountData('xmlns:ns5' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
+              xml['ns6'].EncryptionKeyId('xmlns:ns6' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
+              xml['ns7'].SwipeStatus('xmlns:ns7' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
+              xml['ns1'].CardData do
+                xml['ns1'].CardType params[:CardType]
+                xml['ns1'].PAN params[:PAN]
+                xml['ns1'].Expire params[:Expire]
+                xml['ns1'].Track1Data('i:nil' =>"true")
+                xml['ns1'].Track2Data('i:nil' =>"true")
               end
+              xml['ns1'].EcommerceSecurityData('i:nil' =>"true")
             end
               xml['ns2'].CustomerData('xmlns:ns2' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions") do
                 xml['ns2'].BillingData do
@@ -267,7 +225,7 @@ module ActiveMerchant #:nodoc:
                   xml['ns8'].Amount('xmlns:ns8' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text('0.00')
                 end
                 xml['ns9'].CurrencyCode('xmlns:ns9' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text('USD')
-                xml['ns10'].TransactionDateTime('xmlns:ns10' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text('2013-04-03T13:50:16')
+                xml['ns10'].TransactionDateTime('xmlns:ns10' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text(DateTime.now)
                 xml['ns11'].CampaignId('xmlns:ns11' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
                 xml['ns12'].Reference('xmlns:ns12' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text('xyt')
                 xml['ns1'].AccountType 'NotSet'
