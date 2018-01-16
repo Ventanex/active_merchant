@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AuthorizeAndCaptureTransaction xmlns="http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Rest" xmlns:i="http://www.w3.org/2001/XMLSchema-instance" i:type="AuthorizeAndCaptureTransaction">
+   <ApplicationProfileId>71228</ApplicationProfileId>
+   <MerchantProfileId>EPX Retail Test</MerchantProfileId>
+   <Transaction xmlns:ns1="http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Bankcard" i:type="ns1:BankcardTransaction">
+      <ns1:TenderData>
+         <ns4:PaymentAccountDataToken xmlns:ns4="http://schemas.ipcommerce.com/CWS/v2.0/Transactions" i:nil="true" />
+         <ns5:SecurePaymentAccountData xmlns:ns5="http://schemas.ipcommerce.com/CWS/v2.0/Transactions" i:nil="true" />
+         <ns6:EncryptionKeyId xmlns:ns6="http://schemas.ipcommerce.com/CWS/v2.0/Transactions" i:nil="true" />
+         <ns7:SwipeStatus xmlns:ns7="http://schemas.ipcommerce.com/CWS/v2.0/Transactions" i:nil="true" />
+         <ns1:CardData>
+            <ns1:CardType>Visa</ns1:CardType>
+            <ns1:PAN>4242424242424242</ns1:PAN>
+            <ns1:Expire>0819</ns1:Expire>
+            <ns1:Track1Data i:nil="true" />
+            <ns1:Track2Data i:nil="true" />
+         </ns1:CardData>
+         <ns1:EcommerceSecurityData i:nil="true" />
+      </ns1:TenderData>
+      <ns2:CustomerData xmlns:ns2="http://schemas.ipcommerce.com/CWS/v2.0/Transactions">
+         <ns2:BillingData>
+            <ns2:Name i:nil="true" />
+            <ns2:Address>
+               <ns2:Street1>4 corporate sq</ns2:Street1>
+               <ns2:Street2 i:nil="true" />
+               <ns2:City>dever</ns2:City>
+               <ns2:StateProvince></ns2:StateProvince>
+               <ns2:PostalCode>30329</ns2:PostalCode>
+               <ns2:CountryCode>USA</ns2:CountryCode>
+            </ns2:Address>
+            <ns2:BusinessName>MomCorp</ns2:BusinessName>
+            <ns2:Phone>9540123123</ns2:Phone>
+            <ns2:Fax i:nil="true" />
+            <ns2:Email>najeers@chetu.com</ns2:Email>
+         </ns2:BillingData>
+         <ns2:CustomerId>cust123</ns2:CustomerId>
+         <ns2:CustomerTaxId i:nil="true" />
+         <ns2:ShippingData i:nil="true" />
+      </ns2:CustomerData>
+      <ns3:ReportingData xmlns:ns3="http://schemas.ipcommerce.com/CWS/v2.0/Transactions">
+         <ns3:Comment>a test comment</ns3:Comment>
+         <ns3:Description>a test description</ns3:Description>
+         <ns3:Reference>001</ns3:Reference>
+      </ns3:ReportingData>
+      <ns1:TransactionData>
+         <ns8:Amount xmlns:ns8="http://schemas.ipcommerce.com/CWS/v2.0/Transactions" class="text">10.00</ns8:Amount>
+         <ns9:CurrencyCode xmlns:ns9="http://schemas.ipcommerce.com/CWS/v2.0/Transactions" class="text">USD</ns9:CurrencyCode>
+         <ns10:TransactionDateTime xmlns:ns10="http://schemas.ipcommerce.com/CWS/v2.0/Transactions" class="text">2018-01-16T15:29:51-06:00</ns10:TransactionDateTime>
+         <ns11:CampaignId xmlns:ns11="http://schemas.ipcommerce.com/CWS/v2.0/Transactions" i:nil="true" />
+         <ns12:Reference xmlns:ns12="http://schemas.ipcommerce.com/CWS/v2.0/Transactions" class="text">xyt</ns12:Reference>
+         <ns1:AccountType>NotSet</ns1:AccountType>
+         <ns1:ApprovalCode i:nil="true" />
+         <ns1:CashBackAmount>0.0</ns1:CashBackAmount>
+         <ns1:CustomerPresent>Present</ns1:CustomerPresent>
+         <ns1:EmployeeId>11</ns1:EmployeeId>
+         <ns1:EntryMode>Keyed</ns1:EntryMode>
+         <ns1:GoodsType>NotSet</ns1:GoodsType>
+         <ns1:IndustryType>Ecommerce</ns1:IndustryType>
+         <ns1:InternetTransactionData i:nil="true" />
+         <ns1:InvoiceNumber>802</ns1:InvoiceNumber>
+         <ns1:OrderNumber>629203</ns1:OrderNumber>
+         <ns1:IsPartialShipment>false</ns1:IsPartialShipment>
+         <ns1:SignatureCaptured>false</ns1:SignatureCaptured>
+         <ns1:FeeAmount>0.0</ns1:FeeAmount>
+         <ns1:TerminalId i:nil="true" />
+         <ns1:LaneId i:nil="true" />
+         <ns1:TipAmount>0.0</ns1:TipAmount>
+         <ns1:BatchAssignment i:nil="true" />
+         <ns1:PartialApprovalCapable>NotSet</ns1:PartialApprovalCapable>
+         <ns1:ScoreThreshold i:nil="true" />
+         <ns1:IsQuasiCash>false</ns1:IsQuasiCash>
+      </ns1:TransactionData>
+   </Transaction>
+</AuthorizeAndCaptureTransaction>
