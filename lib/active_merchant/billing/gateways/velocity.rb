@@ -154,28 +154,14 @@ module ActiveMerchant #:nodoc:
           # xml.CampaignId('i:nil' =>"true")
           xml.CurrencyCode currency(money)
           xml.TransactionDateTime DateTime.now
-          # xml['ns12'].Reference('xmlns:ns12' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text('xyt')
-          # xml['ns1'].AccountType 'NotSet'
-          # xml['ns1'].ApprovalCode('i:nil' =>"true")
-          # xml['ns1'].CashBackAmount '0.0'
-          # xml['ns1'].CustomerPresent 'Present'
-          # xml['ns1'].EmployeeId '11'
+
           xml['ns1'].EntryMode options[:entry_mode]
           # xml['ns1'].GoodsType 'NotSet'
           xml['ns1'].IndustryType options[:industry_type]
           # xml['ns1'].InternetTransactionData('i:nil' =>"true")
           xml['ns1'].InvoiceNumber options[:invoice_number]
           xml['ns1'].OrderNumber options[:order_number]
-          # xml['ns1'].IsPartialShipment 'false'
-          # xml['ns1'].SignatureCaptured 'false'
-          # xml['ns1'].FeeAmount '0.0'
-          # xml['ns1'].TerminalId('i:nil' =>"true")
-          # xml['ns1'].LaneId('i:nil' =>"true")
-          # xml['ns1'].TipAmount '0.0'
-          # xml['ns1'].BatchAssignment('i:nil' =>"true")
-          # xml['ns1'].PartialApprovalCapable 'NotSet'
-          # xml['ns1'].ScoreThreshold('i:nil' =>"true")
-          # xml['ns1'].IsQuasiCash 'false'
+
         end
       end
 
@@ -226,8 +212,8 @@ module ActiveMerchant #:nodoc:
 
       def commit(action, &payload)
         raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
+        puts "raw_response: #{raw_response.inspect}"
         response = parse(action, raw_response)
-
         avs_result = AVSResult.new(code: response[:avs_result_code])
         cvv_result = CVVResult.new(response[:card_code])
         Response.new(
@@ -272,7 +258,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def post_data(action)
-        Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
+        test = Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
           xml.send(root_for(action), 'xmlns:i' => 'http://www.w3.org/2001/XMLSchema-instance', 'xmlns' => 'http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Rest', 'i:type' =>"AuthorizeAndCaptureTransaction") do
             add_authentication(xml)
             xml.Transaction('xmlns:ns1' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Bankcard", 'i:type' => "ns1:BankcardTransaction" ) do
@@ -302,81 +288,11 @@ module ActiveMerchant #:nodoc:
         })
 
         {
-          'Content-Type' => 'text/xml',
+          'Content-Type' => 'application/xml',
           'Authorization' => "Basic #{Base64.strict_encode64(token.gsub(/"/, '').concat(":"))}"
         }
       end
 
-      # def authorize_xml(params)
-      #   Nokogiri::XML::Builder.new do |xml|
-      #     xml.AuthorizeTransaction('xmlns:i' => 'http://www.w3.org/2001/XMLSchema-instance', 'xmlns' => 'http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Rest', 'i:type' =>"AuthorizeTransaction" ) do
-      #       xml.ApplicationProfileId @application_profile_id
-      #       xml.MerchantProfileId @merchant_profile_id
-      #       xml.Transaction('xmlns:ns1' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Bankcard", 'i:type' => "ns1:BankcardTransaction" ) do
-      #         xml['ns1'].TenderData do
-      #           xml['ns1'].CardData do
-      #             xml['ns1'].CardType params[:card_type]
-      #             xml['ns1'].CardholderName params[:card_holder_name]
-      #             if params[:track_2_data].present?
-      #               xml['ns1'].Track2Data params[:track_2_data]
-      #               xml['ns1'].PAN('i:nil' =>"true")
-      #               xml['ns1'].Expire('i:nil' =>"true")
-      #               xml['ns1'].Track1Data('i:nil' =>"true")
-      #             elsif params[:track_1_data].present?
-      #               xml['ns1'].Track1Data params[:track_1_data]
-      #               xml['ns1'].PAN('i:nil' =>"true")
-      #               xml['ns1'].Expire('i:nil' =>"true")
-      #               xml['ns1'].Track2Data('i:nil' =>"true")
-      #             else
-      #               xml['ns1'].PAN params[:pan]
-      #               xml['ns1'].Expire params[:expire]
-      #               xml['ns1'].Track1Data('i:nil' =>"true")
-      #               xml['ns1'].Track2Data('i:nil' =>"true")
-      #             end
-      #           end
-      #           xml['ns1'].CardSecurityData do
-      #             xml['ns1'].AVSData do
-      #               xml['ns1'].CardholderName('i:nil' =>"true")
-      #               xml['ns1'].Street params[:Street]
-      #               xml['ns1'].City params[:city]
-      #               xml['ns1'].StateProvince params[:state_province]
-      #               xml['ns1'].PostalCode params[:postal_code]
-      #               xml['ns1'].Phone params[:phone]
-      #               xml['ns1'].Email params[:email]
-      #             end
-      #             xml['ns1'].CVDataProvided 'Provided'
-      #             xml['ns1'].CVData params[:cv_data]
-      #             xml['ns1'].KeySerialNumber('i:nil' =>"true")
-      #             xml['ns1'].PIN('i:nil' =>"true")
-      #             xml['ns1'].IdentificationInformation('i:nil' =>"true")
-      #           end
-      #           xml['ns1'].EcommerceSecurityData('i:nil' =>"true")
-      #         end
-      #         xml['ns1'].TransactionData do
-      #           if params[:amount] != ''
-      #             xml['ns8'].Amount('xmlns:ns8' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text(params[:amount])
-      #           else
-      #             xml['ns8'].Amount('xmlns:ns8' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text('0.00')
-      #           end
-      #           xml['ns9'].CurrencyCode('xmlns:ns9' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text('USD')
-      #           xml['ns10'].TransactionDateTime('xmlns:ns10' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions").text('2014-04-03T13:50:16')
-      #           xml['ns1'].AccountType 'NotSet'
-      #           xml['ns1'].CustomerPresent 'Present'
-      #           xml['ns1'].EmployeeId '11'
-      #           if params[:track_2_data].present? || params[:track_1_data].present?
-      #             xml['ns1'].EntryMode params[:entry_mode]
-      #           else
-      #             xml['ns1'].EntryMode 'Keyed'
-      #           end
-      #           xml['ns1'].IndustryType params[:industry_type]
-      #           xml['ns1'].InvoiceNumber('i:nil' =>"true")
-      #           xml['ns1'].OrderNumber('i:nil' =>"true")
-      #           xml['ns1'].TipAmount '0.0'
-      #         end
-      #       end
-      #     end
-      #   end
-      # end
     end
   end
 end
