@@ -31,7 +31,7 @@ module ActiveMerchant #:nodoc:
         @application_profile_id = options[:application_profile_id]
         @merchant_profile_id = options[:merchant_profile_id]
 
-        live_url = options[:url]
+        self.live_url = options[:url]
 
         super
       end
