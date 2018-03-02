@@ -4,7 +4,7 @@ module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     class VelocityGateway < Gateway
       include Empty
-      self.live_url = 'https://api.cert.nabcommerce.com/REST/2.0.18'
+      self.live_url = 'https://api.nabcommerce.com/REST/2.0.18'
 
       self.supported_countries = ['US']
       self.default_currency = 'USD'
@@ -24,12 +24,15 @@ module ActiveMerchant #:nodoc:
       AVS_ERRORS = %w(A E I N R W Z)
       AVS_REASON_CODES = %w(27 45)
 
-      def initialize(options={})
+      def initialize(url, options={})
         requires!(options, :identity_token, :work_flow_id, :application_profile_id, :merchant_profile_id)
         @identity_token = options[:identity_token]
         @work_flow_id = options[:work_flow_id]
         @application_profile_id = options[:application_profile_id]
         @merchant_profile_id = options[:merchant_profile_id]
+
+        live_url = url
+
         super
       end
 
