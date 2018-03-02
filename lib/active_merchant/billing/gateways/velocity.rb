@@ -24,14 +24,14 @@ module ActiveMerchant #:nodoc:
       AVS_ERRORS = %w(A E I N R W Z)
       AVS_REASON_CODES = %w(27 45)
 
-      def initialize(url, options={})
+      def initialize(options={})
         requires!(options, :identity_token, :work_flow_id, :application_profile_id, :merchant_profile_id)
         @identity_token = options[:identity_token]
         @work_flow_id = options[:work_flow_id]
         @application_profile_id = options[:application_profile_id]
         @merchant_profile_id = options[:merchant_profile_id]
 
-        live_url = url
+        live_url = options[:url]
 
         super
       end
