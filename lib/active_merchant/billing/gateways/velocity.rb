@@ -149,7 +149,7 @@ module ActiveMerchant #:nodoc:
           if money.blank?
             xml['ns8'].Amount('0.00', 'xmlns:ns8' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
           else
-            xml['ns8'].Amount(amount(money), 'xmlns:ns8' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
+            xml['ns8'].Amount(money, 'xmlns:ns8' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
           end
           # xml.CampaignId('i:nil' =>"true")
           xml.CurrencyCode currency(money)
