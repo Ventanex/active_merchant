@@ -211,22 +211,26 @@ module ActiveMerchant #:nodoc:
       end
 
       def commit(action, &payload)
-        raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
-        puts "raw_response: #{raw_response.inspect}"
-        response = parse(action, raw_response)
-        avs_result = AVSResult.new(code: response[:avs_result_code])
-        cvv_result = CVVResult.new(response[:card_code])
-        Response.new(
-          success_from(response),
-          message_from(response, avs_result, cvv_result),
-          response,
-          authorization: authorization_from(action, response),
-          test: test?,
-          avs_result: avs_result,
-          cvv_result: cvv_result,
-          fraud_review: fraud_review?(response),
-          error_code: map_error_code(response[:status_code])
-        )
+        begin
+          raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
+
+          response = parse(action, raw_response)
+          avs_result = AVSResult.new(code: response[:avs_result_code])
+          cvv_result = CVVResult.new(response[:card_code])
+          Response.new(
+            success_from(response),
+            message_from(response, avs_result, cvv_result),
+            response,
+            authorization: authorization_from(action, response),
+            test: test?,
+            avs_result: avs_result,
+            cvv_result: cvv_result,
+            fraud_review: fraud_review?(response),
+            error_code: map_error_code(response[:status_code])
+          )
+        rescue ActiveMerchant::ResponseError => e
+          { "error_code" => "404",  "auth_response_text" => e.to_s }
+        end
       end
 
       def success_from(response)
