@@ -229,17 +229,7 @@ module ActiveMerchant #:nodoc:
             error_code: map_error_code(response[:status_code])
           )
         rescue ActiveMerchant::ResponseError => e
-          Response.new(
-            success_from(response),
-            message_from(response, avs_result, cvv_result),
-            response,
-            authorization: authorization_from(action, response),
-            test: test?,
-            avs_result: "",
-            cvv_result: "",
-            fraud_review: fraud_review?(response),
-            error_code: map_error_code(response[:status_code])
-          )
+          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
         end
       end
 
