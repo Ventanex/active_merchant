@@ -229,7 +229,7 @@ module ActiveMerchant #:nodoc:
             error_code: map_error_code(response[:status_code])
           )
         rescue ActiveMerchant::ResponseError => e
-          { "error_code" => "404",  "auth_response_text" => e.to_sm, "authorization": "" }
+          { "error_code" => "404",  "auth_response_text" => e.to_s, "authorization": "" }
         end
       end
 
