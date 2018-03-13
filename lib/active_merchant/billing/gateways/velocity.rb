@@ -38,7 +38,7 @@ module ActiveMerchant #:nodoc:
 
       def purchase(money, payment, options={})
         commit(:authorize_and_capture) do |xml|
-          add_payment_source(xml, payment)
+          add_payment_source(xml, payment, options)
           # add_address(xml, options)
           add_invoice(xml, money, options)
 
@@ -83,8 +83,15 @@ module ActiveMerchant #:nodoc:
 
       private
 
-      def add_payment_source(xml, source)
+      def add_payment_source(xml, source, options)
         return unless source
+
+        options[:street1] ||= nil
+        options[:street2] ||= nil
+        options[:city] ||= nil
+        options[:country_code] ||= nil
+        options[:state_province] ||= nil
+        options[:postal_code] ||= nil
 
         xml['ns1'].TenderData do
           xml['ns1'].CardData do
