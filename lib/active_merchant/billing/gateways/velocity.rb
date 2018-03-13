@@ -39,7 +39,7 @@ module ActiveMerchant #:nodoc:
       def purchase(money, payment, options={})
         commit(:authorize_and_capture) do |xml|
           add_payment_source(xml, payment)
-          add_address(xml, options)
+          # add_address(xml, options)
           add_invoice(xml, money, options)
 
           puts "xml: #{xml.to_xml}"
@@ -87,18 +87,25 @@ module ActiveMerchant #:nodoc:
         return unless source
 
         xml['ns1'].TenderData do
-          # xml['ns4'].PaymentAccountDataToken('xmlns:ns4' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions", 'i:nil' =>"true")
-          # xml['ns5'].SecurePaymentAccountData('xmlns:ns5' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions", 'i:nil' =>"true")
-          # xml['ns6'].EncryptionKeyId('xmlns:ns6' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
-          # xml['ns7'].SwipeStatus('xmlns:ns7' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions",'i:nil' =>"true")
           xml['ns1'].CardData do
             xml['ns1'].CardType source.brand.titleize
             xml['ns1'].PAN truncate(source.number, 16)
             xml['ns1'].Expire source.expiry_date.expiration.strftime('%m%y')
-            # xml['ns1'].Track1Data('i:nil' =>"true")
-            # xml['ns1'].Track2Data('i:nil' =>"true")
+            xml['ns1'].Track1Data('i:nil' =>"true")
+            xml['ns1'].Track2Data('i:nil' =>"true")
           end
-          # xml['ns1'].EcommerceSecurityData('i:nil' =>"true")
+
+          xml['ns1'].CardSecurityData do
+            xml['ns1'].AVSData do
+              xml['ns1'].CardHolderName('i:nil' =>"true")
+              xml['ns1'].Street options[:street1]
+              xml['ns1'].City options[:city]
+              xml['ns1'].StateProvince options[:state_province]
+              xml['ns1'].PostalCode options[:postal_code]
+              xml['ns1'].Country options[:country_code]
+              xml['ns1'].Phone('i:nil' =>"true")
+            end
+          end
         end
       end
 
@@ -178,17 +185,14 @@ module ActiveMerchant #:nodoc:
           else
             xml['ns8'].Amount(amount(money), 'xmlns:ns8' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
           end
-          # xml.CampaignId('i:nil' =>"true")
           xml.CurrencyCode currency(money)
           xml.TransactionDateTime DateTime.now
 
           xml['ns1'].EntryMode options[:entry_mode]
-          # xml['ns1'].GoodsType 'NotSet'
           xml['ns1'].IndustryType options[:industry_type]
-          # xml['ns1'].InternetTransactionData('i:nil' =>"true")
           xml['ns1'].InvoiceNumber options[:invoice_number]
           xml['ns1'].OrderNumber options[:order_number]
-
+          xml['ns1'].CustomerPresent options[:industry_type]
         end
       end
 
