@@ -257,6 +257,7 @@ module ActiveMerchant #:nodoc:
           raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
 
           response = parse(action, raw_response)
+          puts "response: #{response.inspect}"
           avs_result = AVSResult.new(code: response[:avs_result_code])
           cvv_result = CVVResult.new(response[:card_code])
           Response.new(
