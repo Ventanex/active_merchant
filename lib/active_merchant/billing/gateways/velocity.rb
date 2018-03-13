@@ -39,20 +39,20 @@ module ActiveMerchant #:nodoc:
       def purchase(money, payment, options={})
         commit(:authorize_and_capture) do |xml|
           add_payment_source(xml, payment)
-          # add_customer_data(xml, payment, options)
-          # add_reporting_data(xml, options)
+          add_address(xml, options)
           add_invoice(xml, money, options)
+
+          puts "xml: #{xml.to_xml}"
         end
       end
 
-      # def authorize(money, payment, options={})
-      #   post = {}
-      #   add_invoice(post, money, options)
-      #   add_address(post, payment, options)
-      #   add_customer_data(post, options)
-      #
-      #   commit('authorize', post)
-      # end
+      def authorize(transaction_id, options={})
+        post = {
+          transaction_id: transaction_id
+        }
+
+        commit_authorize(:put, post)
+      end
       #
       # def capture(money, authorization, options={})
       #   commit('capture', post)
@@ -102,10 +102,34 @@ module ActiveMerchant #:nodoc:
         end
       end
 
+      def add_address(xml, options)
+        options[:street1] ||= nil
+        options[:street2] ||= nil
+        options[:city] ||= nil
+        options[:country_code] ||= nil
+        options[:state_province] ||= nil
+        options[:postal_code] ||= nil
+
+        xml['ns2'].CustomerData('xmlns:ns2' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions") do
+          xml['ns2'].BillingData do
+            xml['ns2'].Name('i:nil' =>"true")
+            xml['ns2'].Address do
+              xml['ns2'].Street1 options[:street1]
+              xml['ns2'].Street2 options[:street2]
+              xml['ns2'].City options[:city]
+              xml['ns2'].StateProvince options[:state_province]
+              xml['ns2'].PostalCode options[:postal_code]
+              xml['ns2'].CountryCode options[:country_code]
+            end
+          end
+        end
+      end
+
       def add_customer_data(xml, creditcard, options)
         options[:phone] ||= '9540123123'
         options[:email] ||= 'najeers@chetu.com'
         options[:street1] ||= '4 corporate sq'
+        options[:street2] ||= '4 corporate sq'
         options[:city] ||= 'dever'
         options[:country_code] ||= 'USA'
         options[:state_province]
@@ -117,7 +141,7 @@ module ActiveMerchant #:nodoc:
             xml['ns2'].Name('i:nil' =>"true")
             xml['ns2'].Address do
               xml['ns2'].Street1 options[:street1]
-              xml['ns2'].Street2('i:nil' =>"true")
+              xml['ns2'].Street2 options[:street1]
               xml['ns2'].City options[:city]
               xml['ns2'].StateProvince options[:state_province]
               xml['ns2'].PostalCode options[:postal_code]
@@ -210,6 +234,10 @@ module ActiveMerchant #:nodoc:
           empty?(element.content) ? nil : element.content[-4..-1]
         end
 
+        response[:is_acknowledged] = if(element = doc.at_xpath("//IsAcknowledged"))
+          empty?(element.content) ? false : element.content
+        end
+
         response
       end
 
@@ -229,10 +257,33 @@ module ActiveMerchant #:nodoc:
             avs_result: avs_result,
             cvv_result: cvv_result,
             fraud_review: fraud_review?(response),
-            error_code: map_error_code(response[:status_code])
+            error_code: response[:status_code]
           )
         rescue ActiveMerchant::ResponseError => e
           return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
+        end
+      end
+
+      def commit_authorize(type, parameters)
+        response = parse(handle_resp(raw_ssl_request(type, live_url + "/Txn/#{@work_flow_id}", parameters.to_json, headers)))
+
+        Response.new(
+          success_from(response),
+          message_from(response),
+          response,
+          authorization: authorization_from(response),
+          avs_result: AVSResult.new(code: response["response"]["avs_result"]),
+          cvv_result: CVVResult.new(response["response"]["cvv_code"]),
+          test: test?
+        )
+      end
+
+      def handle_resp(response)
+        case response.code.to_i
+        when 200..499
+          response.body
+        else
+          raise ResponseError.new(response)
         end
       end
 
@@ -265,7 +316,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def post_data(action)
-        test = Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
+        Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
           xml.send(root_for(action), 'xmlns:i' => 'http://www.w3.org/2001/XMLSchema-instance', 'xmlns' => 'http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Rest', 'i:type' =>"AuthorizeAndCaptureTransaction") do
             add_authentication(xml)
             xml.Transaction('xmlns:ns1' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Bankcard", 'i:type' => "ns1:BankcardTransaction" ) do
