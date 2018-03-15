@@ -213,7 +213,7 @@ module ActiveMerchant #:nodoc:
           empty?(element.content) ? nil : element.content
         end
 
-        response[:transaction_id] = if(element = doc.at_xpath("//ServiceTransactionId"))
+        response[:transaction_id] = if(element = doc.at_xpath("//TransactionId"))
           empty?(element.content) ? nil : element.content
         end
 
