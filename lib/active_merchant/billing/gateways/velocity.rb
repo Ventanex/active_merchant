@@ -46,32 +46,14 @@ module ActiveMerchant #:nodoc:
         end
       end
 
-      def authorize(transaction_id, options={})
-        post = {
-          transaction_id: transaction_id
-        }
+      def acknowledge(transaction_id, options={})
+        @transaction_id = transaction_id
 
-        commit_authorize(:put, post)
+        commit_acknowledge(:acknowledge) do |xml|
+          add_transaction_id(xml, transaction_id)
+        end
       end
-      #
-      # def capture(money, authorization, options={})
-      #   commit('capture', post)
-      # end
-      #
-      # def refund(money, authorization, options={})
-      #   commit('refund', post)
-      # end
-      #
-      # def void(authorization, options={})
-      #   commit('void', post)
-      # end
-      #
-      # def verify(credit_card, options={})
-      #   MultiResponse.run(:use_first_response) do |r|
-      #     r.process { authorize(100, credit_card, options) }
-      #     r.process(:ignore_result) { void(r.authorization, options) }
-      #   end
-      # end
+
 
       def supports_scrubbing?
         true
@@ -136,6 +118,12 @@ module ActiveMerchant #:nodoc:
               xml['ns2'].CountryCode options[:country_code]
             end
           end
+        end
+      end
+
+      def add_transaction_id(xml, transaction_id)
+        xml.DifferenceData do
+          xml.TransactionId transaction_id
         end
       end
 
@@ -252,14 +240,34 @@ module ActiveMerchant #:nodoc:
         response
       end
 
+      def parse_response(action, body)
+        doc = Nokogiri::XML(body)
+        doc.remove_namespaces!
+
+        response = {action: action}
+
+        response[:status] = if(element = doc.at_xpath("//Response/Status"))
+          empty?(element.content) ? nil : element.content
+        end
+
+        response[:status_code] = if(element = doc.at_xpath("//Response/StatusCode"))
+          empty?(element.content) ? nil : element.content
+        end
+
+        response[:status_message] = if(element = doc.at_xpath("//Response/StatusMessage"))
+          empty?(element.content) ? nil : element.content
+        end
+
+        response
+      end
+
       def commit(action, &payload)
         begin
           raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
-
           response = parse(action, raw_response)
-          puts "response: #{response.inspect}"
           avs_result = AVSResult.new(code: response[:avs_result_code])
           cvv_result = CVVResult.new(response[:card_code])
+
           Response.new(
             success_from(response),
             message_from(response, avs_result, cvv_result),
@@ -276,18 +284,15 @@ module ActiveMerchant #:nodoc:
         end
       end
 
-      def commit_authorize(type, parameters)
-        response = parse(handle_resp(raw_ssl_request(type, live_url + "/Txn/#{@work_flow_id}", parameters.to_json, headers)))
+      def commit_acknowledge(action, &payload)
+        begin
+          raw_response = ssl_put(live_url + "/Txn/#{@work_flow_id}/#{@transaction_id}", put_data(action, &payload), headers)
+          response = parse_response(action, raw_response)
 
-        Response.new(
-          success_from(response),
-          message_from(response),
-          response,
-          authorization: authorization_from(response),
-          avs_result: AVSResult.new(code: response["response"]["avs_result"]),
-          cvv_result: CVVResult.new(response["response"]["cvv_code"]),
-          test: test?
-        )
+          response
+        rescue ActiveMerchant::ResponseError => e
+          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
+        end
       end
 
       def handle_resp(response)
@@ -338,11 +343,22 @@ module ActiveMerchant #:nodoc:
         end.to_xml(indent: 0)
       end
 
+      def put_data(action)
+        Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
+          xml.send(root_for(action), 'xmlns:i' => 'http://www.w3.org/2001/XMLSchema-instance', 'xmlns' => 'http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Rest', 'i:type' =>"Acknowledge") do
+            add_authentication(xml)
+            yield(xml)
+          end
+        end.to_xml(indent: 0)
+      end
+
       def root_for(action)
         if action == :authorize_and_capture
           "AuthorizeAndCaptureTransaction"
         elsif action == :authorize
           "AuthorizeTransaction"
+        elsif action == :acknowledge
+          "Acknowledge"
         end
       end
 
