@@ -39,10 +39,7 @@ module ActiveMerchant #:nodoc:
       def purchase(money, payment, options={})
         commit(:authorize_and_capture) do |xml|
           add_payment_source(xml, payment, options)
-          # add_address(xml, options)
           add_invoice(xml, money, options)
-
-          puts "xml: #{xml.to_xml}"
         end
       end
 
@@ -54,6 +51,14 @@ module ActiveMerchant #:nodoc:
         end
       end
 
+      def not_acknowledged(options={})
+        commit_not_acknowledged(:query_transactions_summary) do |xml|
+          add_paging(xml, options)
+          add_query_transactions(xml, options)
+
+          puts "xml: #{xml.to_xml}"
+        end
+      end
 
       def supports_scrubbing?
         true
@@ -64,6 +69,38 @@ module ActiveMerchant #:nodoc:
       end
 
       private
+
+      def add_paging(xml, options)
+        xml.PagingParameters do
+          xml['ns2'].Page(0, 'xmlns:ns2' =>"http://schemas.ipcommerce.com/CWS/v2.0/DataServices")
+          xml['ns3'].PageSize(50, 'xmlns:ns3' =>"http://schemas.ipcommerce.com/CWS/v2.0/DataServices")
+        end
+      end
+
+      def add_query_transactions(xml, options)
+        xml.QueryTransactionsParameters do
+          xml.Amounts('i:nil' =>"true")
+          xml.ApprovalCodes('i:nil' =>"true")
+          xml.BatchIds('i:nil' =>"true")
+          xml.CaptureStates('i:nil' =>"true")
+          xml.CardTypes('i:nil' =>"true")
+          xml.IsAcknowledged false
+          xml.MerchantProfileIds do
+            @merchant_profile_id.each do |m|
+              xml['ns1'].String(m, 'xmlns:ns1' => "http://schemas.microsoft.com/2003/10/Serialization/Arrays")
+            end
+          end
+          xml.OrderNumbers
+          xml.ServiceKeys('i:nil' =>"true")
+          xml.TransactionClassTypePairs('i:nil' =>"true")
+          xml.TransactionStates('i:nil' =>"true")
+          xml.TransactionDateRange do
+            xml.EndDateTime DateTime.today.end_of_day
+            xml.StartDateTime DateTime.today.beginning_of_day
+          end
+        end
+        xml.IncludeRelated false
+      end
 
       def add_payment_source(xml, source, options)
         return unless source
@@ -261,6 +298,19 @@ module ActiveMerchant #:nodoc:
         response
       end
 
+      def parse_acknowledged(action, body)
+        doc = Nokogiri::XML(body)
+        doc.remove_namespaces!
+
+        response = {action: action}
+
+        response[:data] = if(element = doc.at_xpath("ArrayOfSummaryDetail"))
+          empty?(element.content) ? nil : element.content
+        end
+
+        response
+      end
+
       def commit(action, &payload)
         begin
           raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
@@ -279,6 +329,16 @@ module ActiveMerchant #:nodoc:
             fraud_review: fraud_review?(response),
             error_code: response[:status_code]
           )
+        rescue ActiveMerchant::ResponseError => e
+          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
+        end
+      end
+
+      def commit_not_acknowledged(action, &payload)
+        begin
+          raw_response = ssl_post(live_url + "/REST/2.0.18/DataServices/TMS/transactionssummary", not_acknowledged_data(action, &payload), headers)
+
+          raw_response
         rescue ActiveMerchant::ResponseError => e
           return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
         end
@@ -332,6 +392,15 @@ module ActiveMerchant #:nodoc:
         STANDARD_ERROR_CODE_MAPPING["#{status_code}"]
       end
 
+      def not_acknowledged_data(action)
+        Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
+          xml.send(root_for(action), 'xmlns:i' => 'http://www.w3.org/2001/XMLSchema-instance', 'xmlns' => 'http://schemas.ipcommerce.com/CWS/v2.0/DataServices/TMS/Rest', 'i:type' =>"QueryTransactionsSummary") do
+            add_authentication(xml)
+            yield(xml)
+          end
+        end.to_xml(indent: 0)
+      end
+
       def post_data(action)
         Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
           xml.send(root_for(action), 'xmlns:i' => 'http://www.w3.org/2001/XMLSchema-instance', 'xmlns' => 'http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Rest', 'i:type' =>"AuthorizeAndCaptureTransaction") do
@@ -359,6 +428,8 @@ module ActiveMerchant #:nodoc:
           "AuthorizeTransaction"
         elsif action == :acknowledge
           "Acknowledge"
+        elsif action == :query_transactions_summary
+          "QueryTransactionsSummary"
         end
       end
 
