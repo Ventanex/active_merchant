@@ -95,8 +95,8 @@ module ActiveMerchant #:nodoc:
           xml.TransactionClassTypePairs('i:nil' =>"true")
           xml.TransactionStates('i:nil' =>"true")
           xml.TransactionDateRange do
-            xml.EndDateTime DateTime.today.end_of_day
-            xml.StartDateTime DateTime.today.beginning_of_day
+            xml.EndDateTime DateTime.now.end_of_day
+            xml.StartDateTime DateTime.now.beginning_of_day
           end
         end
         xml.IncludeRelated false
