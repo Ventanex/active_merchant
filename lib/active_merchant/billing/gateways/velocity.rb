@@ -94,7 +94,7 @@ module ActiveMerchant #:nodoc:
           xml.ServiceKeys('i:nil' =>"true")
           xml.TransactionClassTypePairs('i:nil' =>"true")
           xml.TransactionStates('i:nil' =>"true")
-          xml['tms'].TransactionDateRange do
+          xml['tms'].TransactionDateRange('xmlns:a' => "http://schemas.ipcommerce.com/CWS/v2.0/DataServices") do
             xml['a'].EndDateTime DateTime.now.end_of_day
             xml['a'].StartDateTime DateTime.now.beginning_of_day
           end
