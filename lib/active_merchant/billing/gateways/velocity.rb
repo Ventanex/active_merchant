@@ -83,9 +83,9 @@ module ActiveMerchant #:nodoc:
           xml.ApprovalCodes('i:nil' =>"true")
           xml.BatchIds('i:nil' =>"true")
           xml.CaptureStates('i:nil' =>"true")
-          xml.CardTypes('i:nil' =>"true")
-          xml.IsAcknowledged false
-          xml.MerchantProfileIds do
+          xml.tms:CardTypes('i:nil' =>"true")
+          xml.tms:IsAcknowledged false
+          xml.tms:MerchantProfileIds do
             @merchant_profile_id.each do |m|
               xml['ns1'].String(m, 'xmlns:ns1' => "http://schemas.microsoft.com/2003/10/Serialization/Arrays")
             end
@@ -94,9 +94,9 @@ module ActiveMerchant #:nodoc:
           xml.ServiceKeys('i:nil' =>"true")
           xml.TransactionClassTypePairs('i:nil' =>"true")
           xml.TransactionStates('i:nil' =>"true")
-          xml.TransactionDateRange do
-            xml.EndDateTime DateTime.now.end_of_day
-            xml.StartDateTime DateTime.now.beginning_of_day
+          xml.tms:TransactionDateRange do
+            xml.a:EndDateTime DateTime.now.end_of_day
+            xml.a:StartDateTime DateTime.now.beginning_of_day
           end
         end
         xml.IncludeRelated false
