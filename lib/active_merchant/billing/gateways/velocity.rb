@@ -78,7 +78,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def add_query_transactions(xml, options)
-        xml.QueryTransactionsParameters do
+        xml.QueryTransactionsParameters('xmlns:tms' => "http://schemas.ipcommerce.com/CWS/v2.0/DataServices/TMS") do
           xml.Amounts('i:nil' =>"true")
           xml.ApprovalCodes('i:nil' =>"true")
           xml.BatchIds('i:nil' =>"true")
