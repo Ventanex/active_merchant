@@ -83,8 +83,9 @@ module ActiveMerchant #:nodoc:
           xml.ApprovalCodes('i:nil' =>"true")
           xml.BatchIds('i:nil' =>"true")
           xml.CaptureStates('i:nil' =>"true")
+          xml.CaptureDateRange('i:nil' =>"true")
           xml['tms'].CardTypes('i:nil' =>"true")
-          xml['tms'].IsAcknowledged false
+          xml['tms'].IsAcknowledged False
           xml['tms'].MerchantProfileIds do
             @merchant_profile_id.each do |m|
               xml['ns1'].String(m, 'xmlns:ns1' => "http://schemas.microsoft.com/2003/10/Serialization/Arrays")
