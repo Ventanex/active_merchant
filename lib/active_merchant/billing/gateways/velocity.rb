@@ -55,8 +55,6 @@ module ActiveMerchant #:nodoc:
         commit_not_acknowledged(:query_transactions_summary) do |xml|
           add_paging(xml, options)
           add_query_transactions(xml, options)
-
-          puts "xml: #{xml.to_xml}"
         end
       end
 
