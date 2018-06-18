@@ -313,6 +313,7 @@ module ActiveMerchant #:nodoc:
       def commit(action, &payload)
         begin
           raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
+          puts "raw_response: #{raw_response.inspect}"
           response = parse(action, raw_response)
           avs_result = AVSResult.new(code: response[:avs_result_code])
           cvv_result = CVVResult.new(response[:card_code])
@@ -346,6 +347,7 @@ module ActiveMerchant #:nodoc:
       def commit_acknowledge(action, &payload)
         begin
           raw_response = ssl_put(live_url + "/Txn/#{@work_flow_id}/#{@transaction_id}", put_data(action, &payload), headers)
+          puts "raw_response acknowledge: #{raw_response.inspect}"
           response = parse_response(action, raw_response)
 
           response
