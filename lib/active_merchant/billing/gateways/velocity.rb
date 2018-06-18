@@ -330,6 +330,7 @@ module ActiveMerchant #:nodoc:
             error_code: response[:status_code]
           )
         rescue ActiveMerchant::ResponseError => e
+          puts "e: #{e.inspect}"
           return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
         end
       end
@@ -340,6 +341,7 @@ module ActiveMerchant #:nodoc:
 
           raw_response
         rescue ActiveMerchant::ResponseError => e
+          puts "e: #{e.inspect}"
           return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
         end
       end
@@ -352,6 +354,7 @@ module ActiveMerchant #:nodoc:
 
           response
         rescue ActiveMerchant::ResponseError => e
+          puts "e: #{e.inspect}"
           return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
         end
       end
