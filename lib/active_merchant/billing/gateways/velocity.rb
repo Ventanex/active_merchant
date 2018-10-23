@@ -8,7 +8,7 @@ module ActiveMerchant #:nodoc:
 
       self.supported_countries = ['US']
       self.default_currency = 'USD'
-      self.supported_cardtypes = [:visa, :master, :american_express, :discover]
+      self.supported_cardtypes = [:visa, :master_card, :american_express, :discover]
 
       self.homepage_url = 'https://nabvelocity.com/'
       self.display_name = 'NAB Velocity'
@@ -111,9 +111,11 @@ module ActiveMerchant #:nodoc:
         options[:state_province] ||= nil
         options[:postal_code] ||= nil
 
+        brand = source.brand == "master" ? "MasterCard" : source.brand.titleize
+
         xml['ns1'].TenderData do
           xml['ns1'].CardData do
-            xml['ns1'].CardType source.brand.titleize
+            xml['ns1'].CardType brand
             xml['ns1'].PAN truncate(source.number, 16)
             xml['ns1'].Expire source.expiry_date.expiration.strftime('%m%y')
             xml['ns1'].Track1Data('i:nil' =>"true")
@@ -201,6 +203,13 @@ module ActiveMerchant #:nodoc:
           xml['ns3'].Comment 'a test comment'
           xml['ns3'].Description 'a test description'
           xml['ns3'].Reference '001'
+        end
+      end
+
+      def add_merchant(xml, options)
+        xml['ns1'].MerchantData do
+          xml['ns1'].CntryCode "USA"
+          xml['ns1'].LangInd "ENG"
         end
       end
 
@@ -312,11 +321,13 @@ module ActiveMerchant #:nodoc:
 
       def commit(action, &payload)
         begin
-          raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
-          puts "raw_response: #{raw_response.inspect}"
-          response = parse(action, raw_response)
-          avs_result = AVSResult.new(code: response[:avs_result_code])
-          cvv_result = CVVResult.new(response[:card_code])
+          puts "url: #{live_url + "/Txn/#{@work_flow_id}"}"
+          puts "data: #{post_data(action, &payload)}"
+
+          # raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
+          # response = parse(action, raw_response)
+          # avs_result = AVSResult.new(code: response[:avs_result_code])
+          # cvv_result = CVVResult.new(response[:card_code])
 
           Response.new(
             success_from(response),
@@ -447,7 +458,7 @@ module ActiveMerchant #:nodoc:
           'Content-Type' => 'application/json',
           'Authorization' => "Basic #{Base64.strict_encode64(@identity_token.gsub(/"/, '').concat(":"))}"
         })
-
+        puts "token: #{Base64.strict_encode64(token.gsub(/"/, '').concat(":"))}"
         {
           'Content-Type' => 'application/xml',
           'Authorization' => "Basic #{Base64.strict_encode64(token.gsub(/"/, '').concat(":"))}"
