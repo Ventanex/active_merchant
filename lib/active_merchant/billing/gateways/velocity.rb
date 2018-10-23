@@ -24,6 +24,15 @@ module ActiveMerchant #:nodoc:
       AVS_ERRORS = %w(A E I N R W Z)
       AVS_REASON_CODES = %w(27 45)
 
+      BRANDS = {
+        :visa => 'Visa',
+        :master => "MasterCard",
+        :american_express => "AmericanExpress",
+        :discover => "Discover"
+      }
+
+      E4_BRANDS = BRANDS.merge({:mastercard => "MasterCard", :master_card => "MasterCard"})
+
       def initialize(options={})
         requires!(options, :identity_token, :work_flow_id, :application_profile_id, :merchant_profile_id)
         @identity_token = options[:identity_token]
@@ -101,6 +110,10 @@ module ActiveMerchant #:nodoc:
         xml.IncludeRelated false
       end
 
+      def card_type(credit_card_brand)
+        E4_BRANDS[credit_card_brand.to_sym] if credit_card_brand
+      end
+
       def add_payment_source(xml, source, options)
         return unless source
 
@@ -111,11 +124,9 @@ module ActiveMerchant #:nodoc:
         options[:state_province] ||= nil
         options[:postal_code] ||= nil
 
-        brand = source.brand == "master" ? "MasterCard" : source.brand.titleize
-
         xml['ns1'].TenderData do
           xml['ns1'].CardData do
-            xml['ns1'].CardType brand
+            xml['ns1'].CardType card_type(source.brand)
             xml['ns1'].PAN truncate(source.number, 16)
             xml['ns1'].Expire source.expiry_date.expiration.strftime('%m%y')
             xml['ns1'].Track1Data('i:nil' =>"true")
@@ -321,13 +332,13 @@ module ActiveMerchant #:nodoc:
 
       def commit(action, &payload)
         begin
-          puts "url: #{live_url + "/Txn/#{@work_flow_id}"}"
-          puts "data: #{post_data(action, &payload)}"
+          # puts "url: #{live_url + "/Txn/#{@work_flow_id}"}"
+          # puts "data: #{post_data(action, &payload)}"
 
-          # raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
-          # response = parse(action, raw_response)
-          # avs_result = AVSResult.new(code: response[:avs_result_code])
-          # cvv_result = CVVResult.new(response[:card_code])
+          raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
+          response = parse(action, raw_response)
+          avs_result = AVSResult.new(code: response[:avs_result_code])
+          cvv_result = CVVResult.new(response[:card_code])
 
           Response.new(
             success_from(response),
