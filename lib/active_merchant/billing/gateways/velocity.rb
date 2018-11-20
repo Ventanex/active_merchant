@@ -5,6 +5,7 @@ module ActiveMerchant #:nodoc:
     class VelocityGateway < Gateway
       include Empty
       self.live_url = 'https://api.nabcommerce.com/REST/2.0.18'
+      self.repayment_url = 'https://api.nabcommerce.com'
 
       self.supported_countries = ['US']
       self.default_currency = 'USD'
@@ -41,6 +42,7 @@ module ActiveMerchant #:nodoc:
         @merchant_profile_id = options[:merchant_profile_id]
 
         self.live_url = options[:url]
+        self.repayment_url = options[:repayment_url]
 
         super
       end
@@ -49,6 +51,13 @@ module ActiveMerchant #:nodoc:
         commit(:authorize_and_capture) do |xml|
           add_payment_source(xml, payment, options)
           add_invoice(xml, money, options)
+        end
+      end
+
+      def repayment(money, payment, options={})
+        commit_repayment(:authorize_and_capture) do |xml|
+          add_repayment_source(xml, payment, options)
+          add_repayment_invoice(xml, money, options)
         end
       end
 
@@ -142,6 +151,40 @@ module ActiveMerchant #:nodoc:
               xml['ns1'].PostalCode options[:postal_code]
               xml['ns1'].Country options[:country_code]
               xml['ns1'].Phone('i:nil' =>"true")
+            end
+          end
+        end
+      end
+
+      def add_repayment_source(xml, source, options)
+        return unless source
+
+        options[:street1] ||= nil
+        options[:street2] ||= nil
+        options[:city] ||= nil
+        options[:country_code] ||= nil
+        options[:state_province] ||= nil
+        options[:postal_code] ||= nil
+
+        xml['ns1'].TenderData do
+          xml['ns1'].PaymentAccountDataToken('i:nil' =>"true")
+          xml['ns1'].SecurePaymentAccountData('i:nil' =>"true")
+          xml['ns1'].CardData do
+            xml['ns1'].CardType card_type(source.brand)
+            xml['ns1'].CardHolderName('i:nil' =>"true")
+            xml['ns1'].PAN truncate(source.number, 16)
+            xml['ns1'].Expire source.expiry_date.expiration.strftime('%m%y')
+            xml['ns1'].Track1Data('i:nil' =>"true")
+            xml['ns1'].Track2Data('i:nil' =>"true")
+          end
+
+          xml['ns1'].CardSecurityData do
+            xml['ns1'].AVSData do
+              xml['ns1'].Street options[:street1]
+              xml['ns1'].City options[:city]
+              xml['ns1'].StateProvince options[:state_province]
+              xml['ns1'].PostalCode options[:postal_code]
+              xml['ns1'].Country options[:country_code]
             end
           end
         end
@@ -247,6 +290,30 @@ module ActiveMerchant #:nodoc:
         end
       end
 
+      def add_repayment_invoice(xml, money, options)
+        options[:entry_mode] ||= 'Keyed' # ['Keyed', 'TrackDataFromMSR']
+        options[:industry_type] ||= 'Ecommerce' # ['Ecommerce', 'MOTO', 'NotSet', 'Restaurant', 'Retail']
+        options[:invoice_number] ||= '802'
+        options[:order_number] ||= '629203'
+
+        xml['ns1'].TransactionData do
+          if money.blank?
+            xml['ns8'].Amount('0.00', 'xmlns:ns8' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
+          else
+            xml['ns8'].Amount(amount(money), 'xmlns:ns8' =>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
+          end
+          xml.CurrencyCode currency(money)
+          xml.TransactionDateTime DateTime.now
+
+          xml['ns1'].EntryMode options[:entry_mode]
+          xml['ns1'].IndustryType options[:industry_type]
+          xml['ns1'].InvoiceNumber options[:invoice_number]
+          xml['ns1'].OrderNumber options[:order_number]
+          xml['ns1'].CustomerPresent options[:industry_type]
+          xml['ns1'].CardProduct 'VisaRepayment'
+        end
+      end
+
       def parse(action, body)
         doc = Nokogiri::XML(body)
         doc.remove_namespaces!
@@ -336,6 +403,30 @@ module ActiveMerchant #:nodoc:
           # puts "data: #{post_data(action, &payload)}"
 
           raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
+          response = parse(action, raw_response)
+          avs_result = AVSResult.new(code: response[:avs_result_code])
+          cvv_result = CVVResult.new(response[:card_code])
+
+          Response.new(
+            success_from(response),
+            message_from(response, avs_result, cvv_result),
+            response,
+            authorization: authorization_from(action, response),
+            test: test?,
+            avs_result: avs_result,
+            cvv_result: cvv_result,
+            fraud_review: fraud_review?(response),
+            error_code: response[:status_code]
+          )
+        rescue ActiveMerchant::ResponseError => e
+          puts "e: #{e.inspect}"
+          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
+        end
+      end
+
+      def commit_repayment(action, &payload)
+        begin
+          raw_response = ssl_post(repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}", post_data(action, &payload), headers)
           response = parse(action, raw_response)
           avs_result = AVSResult.new(code: response[:avs_result_code])
           cvv_result = CVVResult.new(response[:card_code])
@@ -469,7 +560,6 @@ module ActiveMerchant #:nodoc:
           'Content-Type' => 'application/json',
           'Authorization' => "Basic #{Base64.strict_encode64(@identity_token.gsub(/"/, '').concat(":"))}"
         })
-        puts "token: #{Base64.strict_encode64(token.gsub(/"/, '').concat(":"))}"
         {
           'Content-Type' => 'application/xml',
           'Authorization' => "Basic #{Base64.strict_encode64(token.gsub(/"/, '').concat(":"))}"
