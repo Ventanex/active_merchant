@@ -399,8 +399,8 @@ module ActiveMerchant #:nodoc:
 
       def commit(action, &payload)
         begin
-          # puts "url: #{live_url + "/Txn/#{@work_flow_id}"}"
-          # puts "data: #{post_data(action, &payload)}"
+          puts "url: #{live_url + "/Txn/#{@work_flow_id}"}"
+          puts "data: #{post_data(action, &payload)}"
 
           raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", post_data(action, &payload), headers)
           response = parse(action, raw_response)
