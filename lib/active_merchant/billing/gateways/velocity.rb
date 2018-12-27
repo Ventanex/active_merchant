@@ -560,6 +560,7 @@ module ActiveMerchant #:nodoc:
           'Content-Type' => 'application/json',
           'Authorization' => "Basic #{Base64.strict_encode64(@identity_token.gsub(/"/, '').concat(":"))}"
         })
+        puts "token: #{Base64.strict_encode64(token.gsub(/"/, '').concat(":"))}"
         {
           'Content-Type' => 'application/xml',
           'Authorization' => "Basic #{Base64.strict_encode64(token.gsub(/"/, '').concat(":"))}"
