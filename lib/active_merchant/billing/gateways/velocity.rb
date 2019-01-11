@@ -133,9 +133,11 @@ module ActiveMerchant #:nodoc:
         options[:state_province] ||= nil
         options[:postal_code] ||= nil
 
+        cardType = card_type(source.brand) || 'Visa'
+
         xml['ns1'].TenderData do
           xml['ns1'].CardData do
-            xml['ns1'].CardType card_type(source.brand)
+            xml['ns1'].CardType cardType
             xml['ns1'].PAN truncate(source.number, 16)
             xml['ns1'].Expire source.expiry_date.expiration.strftime('%m%y')
             xml['ns1'].Track1Data('i:nil' =>"true")
@@ -166,11 +168,13 @@ module ActiveMerchant #:nodoc:
         options[:state_province] ||= nil
         options[:postal_code] ||= nil
 
+        card_source = card_type(source.brand) || 'Visa'
+
         xml['ns1'].TenderData do
           xml['ns1'].PaymentAccountDataToken('i:nil' =>"true")
           xml['ns1'].SecurePaymentAccountData('i:nil' =>"true")
           xml['ns1'].CardData do
-            xml['ns1'].CardType card_type(source.brand)
+            xml['ns1'].CardType card_source
             xml['ns1'].CardHolderName('i:nil' =>"true")
             xml['ns1'].PAN truncate(source.number, 16)
             xml['ns1'].Expire source.expiry_date.expiration.strftime('%m%y')
@@ -419,13 +423,15 @@ module ActiveMerchant #:nodoc:
             error_code: response[:status_code]
           )
         rescue ActiveMerchant::ResponseError => e
-          puts "e: #{e.inspect}"
-          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
+          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code, data: post_data(action, &payload)}, :test => test?)
         end
       end
 
       def commit_repayment(action, &payload)
         begin
+          puts "url: #{repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}"}"
+          puts "data: #{post_data(action, &payload)}"
+
           raw_response = ssl_post(repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}", post_data(action, &payload), headers)
           response = parse(action, raw_response)
           avs_result = AVSResult.new(code: response[:avs_result_code])
@@ -443,8 +449,7 @@ module ActiveMerchant #:nodoc:
             error_code: response[:status_code]
           )
         rescue ActiveMerchant::ResponseError => e
-          puts "e: #{e.inspect}"
-          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
+          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code, data: post_data(action, &payload)}, :test => test?)
         end
       end
 
@@ -462,12 +467,10 @@ module ActiveMerchant #:nodoc:
       def commit_acknowledge(action, &payload)
         begin
           raw_response = ssl_put(live_url + "/Txn/#{@work_flow_id}/#{@transaction_id}", put_data(action, &payload), headers)
-          puts "raw_response acknowledge: #{raw_response.inspect}"
           response = parse_response(action, raw_response)
 
           response
         rescue ActiveMerchant::ResponseError => e
-          puts "e: #{e.inspect}"
           return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
         end
       end
