@@ -61,6 +61,22 @@ module ActiveMerchant #:nodoc:
         end
       end
 
+      def void(transaction_id, options={})
+        @transaction_id = transaction_id
+
+        undo(:undo) do |xml|
+          add_transaction(xml, transaction_id)
+        end
+      end
+
+      def return(money, transaction_id, options={})
+        @transaction_id = transaction_id
+
+        undo(:return) do |xml|
+          add_difference_data(xml, money, transaction_id)
+        end
+      end
+
       def acknowledge(transaction_id, options={})
         @transaction_id = transaction_id
 
@@ -220,6 +236,17 @@ module ActiveMerchant #:nodoc:
       def add_transaction_id(xml, transaction_id)
         xml.DifferenceData do
           xml.TransactionId transaction_id
+        end
+      end
+
+      def add_transaction(xml, transaction_id)
+        xml.TransactionId transaction_id
+      end
+
+      def add_difference_data(xml, transaction_id, amount)
+        xml.DifferenceData('xmlns:ns1' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Bankcard", 'i:type' => "ns1:BankcardReturn") do
+          xml['ns2'].TransactionId(transaction_id, 'xmlns:ns2'=>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
+          xml['ns1'].Amount amount
         end
       end
 
@@ -475,6 +502,32 @@ module ActiveMerchant #:nodoc:
         end
       end
 
+      def undo(action, &payload)
+        begin
+          puts "url: #{live_url + "/Txn/#{@work_flow_id}/#{@transaction_id}"}"
+          puts "data: #{undo_data(action, &payload)}"
+          raw_response = ssl_put(live_url + "/Txn/#{@work_flow_id}/#{@transaction_id}", undo_data(action, &payload), headers)
+          response = parse(action, raw_response)
+
+          response
+        rescue ActiveMerchant::ResponseError => e
+          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
+        end
+      end
+
+      def returnById(action, &payload)
+        begin
+          puts "url: #{live_url + "/Txn/#{@work_flow_id}"}"
+          puts "data: #{return_data(action, &payload)}"
+          raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", return_data(action, &payload), headers)
+          response = parse(action, raw_response)
+
+          response
+        rescue ActiveMerchant::ResponseError => e
+          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code}, :test => test?)
+        end
+      end
+
       def handle_resp(response)
         case response.code.to_i
         when 200..499
@@ -541,6 +594,29 @@ module ActiveMerchant #:nodoc:
         end.to_xml(indent: 0)
       end
 
+      def undo_data(action)
+        Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
+          xml.send(root_for(action), 'xmlns:i' => 'http://www.w3.org/2001/XMLSchema-instance', 'xmlns' => 'http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Rest', 'i:type' =>"Undo") do
+            xml.ApplicationProfileId @application_profile_id
+            xml.BatchIds('xmlns:d2p1'=>"http://schemas.microsoft.com/2003/10/Serialization/Arrays", 'i:nil' =>"true")
+            xml.DifferenceData('xmlns:d2p1' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions", 'i:nil' => "true")
+            xml.MerchantProfileId @merchant_profile_id
+            yield(xml)
+          end
+        end.to_xml(indent: 0)
+      end
+
+      def return_data(action)
+        Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
+          xml.send(root_for(action), 'xmlns:i' => 'http://www.w3.org/2001/XMLSchema-instance', 'xmlns' => 'http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Rest', 'i:type' =>"ReturnById") do
+            xml.ApplicationProfileId @application_profile_id
+            xml.BatchIds('xmlns:d2p1'=>"http://schemas.microsoft.com/2003/10/Serialization/Arrays", 'i:nil' =>"true")
+            yield(xml)
+            xml.MerchantProfileId @merchant_profile_id
+          end
+        end.to_xml(indent: 0)
+      end
+
       def root_for(action)
         if action == :authorize_and_capture
           "AuthorizeAndCaptureTransaction"
@@ -550,6 +626,10 @@ module ActiveMerchant #:nodoc:
           "Acknowledge"
         elsif action == :query_transactions_summary
           "QueryTransactionsSummary"
+        elsif action == :undo
+          "Undo"
+        elsif action == :return
+          "ReturnById"
         end
       end
 
