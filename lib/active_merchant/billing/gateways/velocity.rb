@@ -73,7 +73,7 @@ module ActiveMerchant #:nodoc:
         @transaction_id = transaction_id
 
         returnById(:return) do |xml|
-          add_difference_data(xml, money, transaction_id)
+          add_difference_data(xml, transaction_id, money)
         end
       end
 
@@ -243,10 +243,10 @@ module ActiveMerchant #:nodoc:
         xml.TransactionId transaction_id
       end
 
-      def add_difference_data(xml, transaction_id, amount)
+      def add_difference_data(xml, transaction_id, money)
         xml.DifferenceData('xmlns:ns1' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Bankcard", 'i:type' => "ns1:BankcardReturn") do
           xml['ns2'].TransactionId(transaction_id, 'xmlns:ns2'=>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
-          xml['ns1'].Amount amount
+          xml['ns1'].Amount amount(money)
         end
       end
 
