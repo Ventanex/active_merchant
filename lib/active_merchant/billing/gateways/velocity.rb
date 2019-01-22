@@ -72,7 +72,7 @@ module ActiveMerchant #:nodoc:
       def return(money, transaction_id, options={})
         @transaction_id = transaction_id
 
-        undo(:return) do |xml|
+        returnById(:return) do |xml|
           add_difference_data(xml, money, transaction_id)
         end
       end
