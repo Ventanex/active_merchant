@@ -341,7 +341,7 @@ module ActiveMerchant #:nodoc:
           xml['ns1'].InvoiceNumber options[:invoice_number]
           xml['ns1'].OrderNumber options[:order_number]
           xml['ns1'].CustomerPresent options[:industry_type]
-          xml['ns1'].CardProduct 'VisaRepayment'
+          xml['ns1'].CardProduct 'VisaDebtRepayment'
         end
       end
 
