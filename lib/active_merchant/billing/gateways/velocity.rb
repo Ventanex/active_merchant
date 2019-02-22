@@ -649,7 +649,7 @@ module ActiveMerchant #:nodoc:
 
       def reverse_data(action)
         Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
-          xml.send(root_for(action), 'xmlns:i' => 'http://www.w3.org/2001/XMLSchema-instance', 'xmlns' => 'http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Rest', 'i:type' =>"Undo") do
+          xml.send(root_for(action), 'xmlns:i' => 'http://www.w3.org/2001/XMLSchema-instance', 'xmlns' => 'http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Rest', 'i:type' =>"Adjust") do
             xml.ApplicationProfileId @application_profile_id
             yield(xml)
           end
