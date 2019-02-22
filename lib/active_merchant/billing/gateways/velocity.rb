@@ -554,7 +554,7 @@ module ActiveMerchant #:nodoc:
 
           response
         rescue ActiveMerchant::ResponseError => e
-          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code, data: return_data(action, &payload)}, :test => test?)
+          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code, data: reverse_data(action, &payload)}, :test => test?)
         end
       end
 
