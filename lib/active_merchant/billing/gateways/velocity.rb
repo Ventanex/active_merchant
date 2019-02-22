@@ -69,19 +69,19 @@ module ActiveMerchant #:nodoc:
         end
       end
 
+      def reverse(money, transaction_id, options={})
+        @transaction_id = transaction_id
+
+        adjust(:adjust) do |xml|
+          add_reverse_data(xml, transaction_id, money)
+        end
+      end
+
       def return(money, transaction_id, options={})
         @transaction_id = transaction_id
 
         returnById(:return) do |xml|
           add_difference_data(xml, transaction_id, money)
-        end
-      end
-
-      def reverse(money, transaction_id, options={})
-        @transaction_id = transaction_id
-
-        reverse(:adjust) do |xml|
-          add_reverse_data(xml, transaction_id, money)
         end
       end
 
@@ -260,8 +260,8 @@ module ActiveMerchant #:nodoc:
 
       def add_reverse_data(xml, transaction_id, money)
         xml.DifferenceData('xmlns:ns1' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions") do
-          xml['ns2'].Amount(amount(-money), 'xmlns:ns2'=>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
-          xml['ns3'].TransactionId(transaction_id, 'xmlns:ns2'=>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
+          xml['ns2'].Amount(amount(money), 'xmlns:ns2'=>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
+          xml['ns3'].TransactionId(transaction_id, 'xmlns:ns3'=>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
         end
       end
 
@@ -547,7 +547,7 @@ module ActiveMerchant #:nodoc:
         end
       end
 
-      def reverse(action, &payload)
+      def adjust(action, &payload)
         begin
           raw_response = ssl_put(repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}/#{@transaction_id}", reverse_data(action, &payload), headers)
           response = parse(action, raw_response)
