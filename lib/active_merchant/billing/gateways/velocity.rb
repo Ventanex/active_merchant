@@ -77,6 +77,14 @@ module ActiveMerchant #:nodoc:
         end
       end
 
+      def reverse(money, transaction_id, options={})
+        @transaction_id = transaction_id
+
+        reverse(:adjust) do |xml|
+          add_reverse_data(xml, transaction_id, money)
+        end
+      end
+
       def acknowledge(transaction_id, options={})
         @transaction_id = transaction_id
 
@@ -247,6 +255,13 @@ module ActiveMerchant #:nodoc:
         xml.DifferenceData('xmlns:ns1' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Bankcard", 'i:type' => "ns1:BankcardReturn") do
           xml['ns2'].TransactionId(transaction_id, 'xmlns:ns2'=>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
           xml['ns1'].Amount amount(money)
+        end
+      end
+
+      def add_reverse_data(xml, transaction_id, money)
+        xml.DifferenceData('xmlns:ns1' => "http://schemas.ipcommerce.com/CWS/v2.0/Transactions") do
+          xml['ns2'].Amount(amount(-money), 'xmlns:ns2'=>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
+          xml['ns3'].TransactionId(transaction_id, 'xmlns:ns2'=>"http://schemas.ipcommerce.com/CWS/v2.0/Transactions")
         end
       end
 
@@ -512,8 +527,6 @@ module ActiveMerchant #:nodoc:
 
       def undo(action, &payload)
         begin
-          puts "url: #{live_url + "/Txn/#{@work_flow_id}/#{@transaction_id}"}"
-          puts "data: #{undo_data(action, &payload)}"
           raw_response = ssl_put(live_url + "/Txn/#{@work_flow_id}/#{@transaction_id}", undo_data(action, &payload), headers)
           response = parse(action, raw_response)
 
@@ -525,9 +538,18 @@ module ActiveMerchant #:nodoc:
 
       def returnById(action, &payload)
         begin
-          puts "url: #{live_url + "/Txn/#{@work_flow_id}"}"
-          puts "data: #{return_data(action, &payload)}"
           raw_response = ssl_post(live_url + "/Txn/#{@work_flow_id}", return_data(action, &payload), headers)
+          response = parse(action, raw_response)
+
+          response
+        rescue ActiveMerchant::ResponseError => e
+          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code, data: return_data(action, &payload)}, :test => test?)
+        end
+      end
+
+      def reverse(action, &payload)
+        begin
+          raw_response = ssl_put(repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}/#{@transaction_id}", reverse_data(action, &payload), headers)
           response = parse(action, raw_response)
 
           response
@@ -625,6 +647,15 @@ module ActiveMerchant #:nodoc:
         end.to_xml(indent: 0)
       end
 
+      def reverse_data(action)
+        Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
+          xml.send(root_for(action), 'xmlns:i' => 'http://www.w3.org/2001/XMLSchema-instance', 'xmlns' => 'http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Rest', 'i:type' =>"Undo") do
+            xml.ApplicationProfileId @application_profile_id
+            yield(xml)
+          end
+        end.to_xml(indent: 0)
+      end
+
       def root_for(action)
         if action == :authorize_and_capture
           "AuthorizeAndCaptureTransaction"
@@ -638,6 +669,8 @@ module ActiveMerchant #:nodoc:
           "Undo"
         elsif action == :return
           "ReturnById"
+        elsif action == :adjust
+          "Adjust"
         end
       end
 
