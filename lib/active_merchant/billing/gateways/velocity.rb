@@ -391,6 +391,10 @@ module ActiveMerchant #:nodoc:
           empty?(element.content) ? false : element.content
         end
 
+        response[:card_product] = if(element = doc.at_xpath("//CardProduct"))
+          empty?(element.content) ? nil : element.content
+        end
+
         response
       end
 
