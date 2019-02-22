@@ -395,6 +395,10 @@ module ActiveMerchant #:nodoc:
           empty?(element.content) ? nil : element.content
         end
 
+        response[:approval_code] = if(element = doc.at_xpath("//ApprovalCode"))
+          empty?(element.content) ? nil : element.content
+        end
+
         response
       end
 
