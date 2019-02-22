@@ -503,6 +503,18 @@ module ActiveMerchant #:nodoc:
         end
       end
 
+      def adjust(action, &payload)
+        begin
+          raw_response = ssl_put(repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}/#{@transaction_id}", reverse_data(action, &payload), headers)
+          puts "raw_response: #{raw_response}"
+          response = parse(action, raw_response)
+
+          response
+        rescue ActiveMerchant::ResponseError => e
+          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code, data: reverse_data(action, &payload)}, :test => test?)
+        end
+      end
+
       def commit_not_acknowledged(action, &payload)
         begin
           raw_response = ssl_post(live_url + "/REST/2.0.18/DataServices/TMS/transactionssummary", not_acknowledged_data(action, &payload), headers)
@@ -544,17 +556,6 @@ module ActiveMerchant #:nodoc:
           response
         rescue ActiveMerchant::ResponseError => e
           return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code, data: return_data(action, &payload)}, :test => test?)
-        end
-      end
-
-      def adjust(action, &payload)
-        begin
-          raw_response = ssl_put(repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}/#{@transaction_id}", reverse_data(action, &payload), headers)
-          response = parse(action, raw_response)
-
-          response
-        rescue ActiveMerchant::ResponseError => e
-          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code, data: reverse_data(action, &payload)}, :test => test?)
         end
       end
 
