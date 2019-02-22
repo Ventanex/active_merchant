@@ -507,7 +507,7 @@ module ActiveMerchant #:nodoc:
         begin
           raw_response = ssl_put(repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}/#{@transaction_id}", reverse_data(action, &payload), headers)
           puts "raw_response: #{raw_response}"
-          response = parse(action, raw_response)
+          response = parse_response(action, raw_response)
 
           response
         rescue ActiveMerchant::ResponseError => e
