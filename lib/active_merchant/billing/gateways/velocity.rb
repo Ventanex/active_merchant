@@ -505,10 +505,7 @@ module ActiveMerchant #:nodoc:
 
       def adjust(action, &payload)
         begin
-          puts "url: #{repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}/#{@transaction_id}"}"
-          puts "data: #{reverse_data(action, &payload)}"
-          raw_response = ssl_put(repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}/#{@transaction_id}", reverse_data(action, &payload), json_headers)
-          puts "raw_response: #{raw_response}"
+          raw_response = ssl_put(repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}/#{@transaction_id}", reverse_data(action, &payload), headers)
           response = parse(action, raw_response)
 
           response
