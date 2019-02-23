@@ -509,10 +509,11 @@ module ActiveMerchant #:nodoc:
           puts "data: #{reverse_data(action, &payload)}"
           raw_response = ssl_put(repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}/#{@transaction_id}", reverse_data(action, &payload), json_headers)
           puts "raw_response: #{raw_response}"
-          response = parse_response(action, raw_response)
+          response = parse(action, raw_response)
 
           response
         rescue ActiveMerchant::ResponseError => e
+          puts "e: #{e.inspect}"
           return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code, data: reverse_data(action, &payload)}, :test => test?)
         end
       end
