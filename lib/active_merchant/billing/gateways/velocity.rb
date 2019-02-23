@@ -505,7 +505,7 @@ module ActiveMerchant #:nodoc:
 
       def adjust(action, &payload)
         begin
-          raw_response = ssl_put(repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}/#{@transaction_id}", reverse_data(action, &payload), headers)
+          raw_response = ssl_put(repayment_url + "/CWS/1.1/REST/TPS.svc/#{@work_flow_id}/#{@transaction_id}", reverse_data(action, &payload), json_headers)
           puts "raw_response: #{raw_response}"
           response = parse_response(action, raw_response)
 
@@ -688,6 +688,18 @@ module ActiveMerchant #:nodoc:
         puts "token: #{Base64.strict_encode64(token.gsub(/"/, '').concat(":"))}"
         {
           'Content-Type' => 'application/xml',
+          'Authorization' => "Basic #{Base64.strict_encode64(token.gsub(/"/, '').concat(":"))}"
+        }
+      end
+
+      def json_headers(options = {})
+        token = ssl_get(live_url + '/SvcInfo/token', {
+          'Content-Type' => 'application/json',
+          'Authorization' => "Basic #{Base64.strict_encode64(@identity_token.gsub(/"/, '').concat(":"))}"
+        })
+
+        {
+          'Content-Type' => 'application/json',
           'Authorization' => "Basic #{Base64.strict_encode64(token.gsub(/"/, '').concat(":"))}"
         }
       end
