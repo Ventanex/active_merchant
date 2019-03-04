@@ -22,6 +22,10 @@ module ActiveMerchant #:nodoc:
       @message  = message
     end
 
+    def body
+      response.body
+    end
+
     def to_s
       "Failed with #{response.code} #{response.message if response.respond_to?(:message)}"
     end

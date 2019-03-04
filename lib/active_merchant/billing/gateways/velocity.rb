@@ -417,6 +417,19 @@ module ActiveMerchant #:nodoc:
         response
       end
 
+      def parse_error(action, body)
+        doc = Nokogiri::XML(body)
+        doc.remove_namespaces!
+
+        response = {action: action}
+
+        response[:status_message] = if(element = doc.at_xpath("//ValidationErrors/ValidationError/RuleMessage"))
+          empty?(element.content) ? nil : element.content
+        end
+
+        response
+      end
+
       def parse_response(action, body)
         doc = Nokogiri::XML(body)
         doc.remove_namespaces!
@@ -473,7 +486,8 @@ module ActiveMerchant #:nodoc:
             error_code: response[:status_code]
           )
         rescue ActiveMerchant::ResponseError => e
-          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code, data: post_data(action, &payload)}, :test => test?)
+          error = parse_error(action, e.body)
+          return ActiveMerchant::Billing::Response.new(false,error[:status_message] , {:status_code => e.response.code, data: post_data(action, &payload), error: e.body}, :test => test?)
         end
       end
 
@@ -499,7 +513,8 @@ module ActiveMerchant #:nodoc:
             error_code: response[:status_code]
           )
         rescue ActiveMerchant::ResponseError => e
-          return ActiveMerchant::Billing::Response.new(false, e.response.message, {:status_code => e.response.code, data: post_data(action, &payload)}, :test => test?)
+          error = parse_error(action, e.body)
+          return ActiveMerchant::Billing::Response.new(false,error[:status_message] , {:status_code => e.response.code, data: post_data(action, &payload), error: e.body}, :test => test?)
         end
       end
 
